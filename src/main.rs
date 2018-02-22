@@ -5,6 +5,7 @@ mod parser;
 use std::env;
 use std::fs::File;
 use std::io::{Read, Write};
+use std::path::Path;
 use std::process::Command;
 
 fn main() {
@@ -14,27 +15,48 @@ fn main() {
         std::process::exit(1);
     }
 
-    let filename = &args[0];
-    let mut source = String::new();
-    let mut file = File::open(filename).expect("file not found");
-    file.read_to_string(&mut source)
-        .expect("couldn't read from file");
+    let filepath = Path::new(&args[0]);
+    let source = read_source(filepath);
 
     let asm = lexer::lex(&source)
         .and_then(|tokens| parser::parse(&tokens))
         .map(|ast| codegen::generate(ast));
 
     if let Some(lines) = asm {
-        let mut out = File::create("out.s").expect("couldn't open file for writing");
+        let filename = Path::new(filepath.file_name().unwrap());
+        let asm_filename = filename.with_extension("s");
+        write_assembly(&asm_filename, lines.join("\n").as_bytes());
 
-        out.write_all(lines.join("\n").as_bytes())
-            .expect("couldn't write output");
-
-        out.write(b"\n").unwrap();
-
-        Command::new("gcc")
-            .args(&["-o", "out", "out.s"])
-            .output()
-            .expect("failed to invoke gcc");
+        let binary_filename = Path::new(filepath.file_stem().unwrap());
+        assemble(&asm_filename, &binary_filename);
     }
+}
+
+fn read_source(filepath: &Path) -> String {
+    let mut source = String::new();
+
+    File::open(filepath)
+        .expect("file not found")
+        .read_to_string(&mut source)
+        .expect("couldn't read from file");
+
+    source
+}
+
+fn write_assembly(path: &Path, bytes: &[u8]) {
+    File::create(path)
+        .expect("couldn't open file for writing")
+        .write_all(bytes)
+        .expect("couldn't write output");
+}
+
+fn assemble(asm_filename: &Path, binary_filename: &Path) {
+    Command::new("gcc")
+        .args(&[
+            "-o",
+            binary_filename.to_str().unwrap(),
+            asm_filename.to_str().unwrap(),
+        ])
+        .output()
+        .expect("failed to invoke gcc");
 }
