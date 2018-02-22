@@ -1,9 +1,11 @@
+mod codegen;
 mod lexer;
 mod parser;
 
 use std::env;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
+use std::process::Command;
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -15,10 +17,24 @@ fn main() {
     let filename = &args[0];
     let mut source = String::new();
     let mut file = File::open(filename).expect("file not found");
-    file.read_to_string(&mut source).expect("couldn't read from file");
+    file.read_to_string(&mut source)
+        .expect("couldn't read from file");
 
-    let ast = lexer::lex(&source)
-        .and_then(|tokens| parser::parse(&tokens));
+    let asm = lexer::lex(&source)
+        .and_then(|tokens| parser::parse(&tokens))
+        .map(|ast| codegen::generate(ast));
 
-    println!("{:?}", ast);
+    if let Some(lines) = asm {
+        let mut out = File::create("out.s").expect("couldn't open file for writing");
+
+        out.write_all(lines.join("\n").as_bytes())
+            .expect("couldn't write output");
+
+        out.write(b"\n").unwrap();
+
+        Command::new("gcc")
+            .args(&["-o", "out", "out.s"])
+            .output()
+            .expect("failed to invoke gcc");
+    }
 }
