@@ -1,4 +1,4 @@
-use parser::AST;
+use parser::{UnaryOperator, AST};
 
 pub fn generate(ast: AST) -> Vec<String> {
     generate_program(&ast)
@@ -37,7 +37,24 @@ fn generate_statement(stmt: &AST) -> Vec<String> {
 fn generate_expr(expr: &AST) -> Vec<String> {
     match expr {
         &AST::IntConstant(n) => vec![indent(&format!("movl ${}, %eax", n))],
+        &AST::UnaryOp(ref operator, ref operand) => {
+            let mut lines = generate_expr(operand);
+            lines.append(&mut generate_unary_op(operator));
+            lines
+        }
         _ => Vec::new(),
+    }
+}
+
+fn generate_unary_op(operator: &UnaryOperator) -> Vec<String> {
+    match *operator {
+        UnaryOperator::Minus => vec![indent("neg %eax")],
+        UnaryOperator::Tilde => vec![indent("not %eax")],
+        UnaryOperator::Bang => vec![
+            indent("cmpl $0, %eax"),
+            indent("movl $0, %eax"),
+            indent("sete %al"),
+        ],
     }
 }
 
