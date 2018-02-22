@@ -14,6 +14,28 @@ pub enum Token {
     Minus,
     Tilde,
     Bang,
+    Plus,
+    Times,
+    Divide,
+}
+
+impl Token {
+    fn from_char(c: char) -> Option<Token> {
+        match c {
+            '{' => Some(Token::OpenBrace),
+            '}' => Some(Token::CloseBrace),
+            '(' => Some(Token::OpenParens),
+            ')' => Some(Token::CloseParens),
+            ';' => Some(Token::Semicolon),
+            '-' => Some(Token::Minus),
+            '~' => Some(Token::Tilde),
+            '!' => Some(Token::Bang),
+            '+' => Some(Token::Plus),
+            '*' => Some(Token::Times),
+            '/' => Some(Token::Divide),
+            _ => None,
+        }
+    }
 }
 
 pub fn lex(source: &str) -> Option<Vec<Token>> {
@@ -23,29 +45,15 @@ pub fn lex(source: &str) -> Option<Vec<Token>> {
     loop {
         match chars.next() {
             Some(c) => {
-                let maybe_token = if c == '{' {
-                    Some(Token::OpenBrace)
-                } else if c == '}' {
-                    Some(Token::CloseBrace)
-                } else if c == '(' {
-                    Some(Token::OpenParens)
-                } else if c == ')' {
-                    Some(Token::CloseParens)
-                } else if c == ';' {
-                    Some(Token::Semicolon)
-                } else if c == '-' {
-                    Some(Token::Minus)
-                } else if c == '~' {
-                    Some(Token::Tilde)
-                } else if c == '!' {
-                    Some(Token::Bang)
-                } else if c.is_digit(10) {
-                    lex_number(&mut chars, c)
-                } else if c.is_alphabetic() || c == '_' {
-                    lex_word(&mut chars, c)
-                } else {
-                    None
-                };
+                let maybe_token = Token::from_char(c).or_else(|| {
+                    if c.is_digit(10) {
+                        lex_number(&mut chars, c)
+                    } else if c.is_alphabetic() || c == '_' {
+                        lex_word(&mut chars, c)
+                    } else {
+                        None
+                    }
+                });
 
                 if let Some(token) = maybe_token {
                     tokens.push(token);
