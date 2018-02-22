@@ -22,12 +22,18 @@ fn main() {
         .and_then(|tokens| parser::parse(&tokens))
         .map(|ast| codegen::generate(ast));
 
-    if let Some(lines) = asm {
-        let asm_filename = filepath.with_extension("s");
-        write_assembly(&asm_filename, lines.join("\n").as_bytes());
+    match asm {
+        Some(lines) => {
+            let asm_filename = filepath.with_extension("s");
+            write_assembly(&asm_filename, lines.join("\n").as_bytes());
 
-        let binary_filename = filepath.with_extension("");
-        assemble(&asm_filename, &binary_filename);
+            let binary_filename = filepath.with_extension("");
+            assemble(&asm_filename, &binary_filename);
+        }
+        None => {
+            eprintln!("an error has occurred");
+            std::process::exit(1);
+        }
     }
 }
 

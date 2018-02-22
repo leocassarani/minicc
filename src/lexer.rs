@@ -11,6 +11,9 @@ pub enum Token {
     IntType,
     NumLiteral(u64),
     Identifier(Box<str>),
+    Minus,
+    Tilde,
+    Bang,
 }
 
 pub fn lex(source: &str) -> Option<Vec<Token>> {
@@ -30,6 +33,12 @@ pub fn lex(source: &str) -> Option<Vec<Token>> {
                     Some(Token::CloseParens)
                 } else if c == ';' {
                     Some(Token::Semicolon)
+                } else if c == '-' {
+                    Some(Token::Minus)
+                } else if c == '~' {
+                    Some(Token::Tilde)
+                } else if c == '!' {
+                    Some(Token::Bang)
                 } else if c.is_digit(10) {
                     lex_number(&mut chars, c)
                 } else if c.is_alphabetic() || c == '_' {
