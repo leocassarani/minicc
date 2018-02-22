@@ -41,7 +41,7 @@ pub fn lex(source: &str) -> Option<Vec<Token>> {
                 if let Some(token) = maybe_token {
                     tokens.push(token);
                 }
-            },
+            }
             None => break,
         }
     }
@@ -60,17 +60,14 @@ fn lex_number(chars: &mut iter::Peekable<str::Chars>, digit: char) -> Option<Tok
                 } else {
                     break;
                 }
-            },
+            }
             None => break,
         }
 
         chars.next();
     }
 
-    digits
-        .parse::<u64>()
-        .map(Token::NumLiteral)
-        .ok()
+    digits.parse::<u64>().map(Token::NumLiteral).ok()
 }
 
 fn lex_word(chars: &mut iter::Peekable<str::Chars>, ch: char) -> Option<Token> {
@@ -84,7 +81,7 @@ fn lex_word(chars: &mut iter::Peekable<str::Chars>, ch: char) -> Option<Token> {
                 } else {
                     break;
                 }
-            },
+            }
             None => break,
         }
 
@@ -92,8 +89,8 @@ fn lex_word(chars: &mut iter::Peekable<str::Chars>, ch: char) -> Option<Token> {
     }
 
     match word.as_ref() {
-        "int"    => Some(Token::IntType),
+        "int" => Some(Token::IntType),
         "return" => Some(Token::Return),
-        _        => Some(Token::Identifier(word.into_boxed_str())),
+        _ => Some(Token::Identifier(word.into_boxed_str())),
     }
 }
