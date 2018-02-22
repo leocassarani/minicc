@@ -23,11 +23,10 @@ fn main() {
         .map(|ast| codegen::generate(ast));
 
     if let Some(lines) = asm {
-        let filename = Path::new(filepath.file_name().unwrap());
-        let asm_filename = filename.with_extension("s");
+        let asm_filename = filepath.with_extension("s");
         write_assembly(&asm_filename, lines.join("\n").as_bytes());
 
-        let binary_filename = Path::new(filepath.file_stem().unwrap());
+        let binary_filename = filepath.with_extension("");
         assemble(&asm_filename, &binary_filename);
     }
 }
