@@ -14,7 +14,8 @@ fn generate_program(ast: &AST) -> Vec<String> {
 fn generate_function(func: &AST) -> Vec<String> {
     match func {
         &AST::Function(ref name, ref body) => {
-            let mut lines = vec![format!("\t.globl _{}", name), format!("_{}:", name)];
+            let label = format!("_{}", name);
+            let mut lines = vec![indent(&format!(".globl {}", label)), format!("{}:", label)];
             lines.append(&mut generate_statement(&body));
             lines
         }
@@ -26,7 +27,7 @@ fn generate_statement(stmt: &AST) -> Vec<String> {
     match stmt {
         &AST::Return(ref expr) => {
             let mut lines = generate_expr(&expr);
-            lines.push(format!("\tret"));
+            lines.push(indent("ret"));
             lines
         }
         _ => Vec::new(),
@@ -35,7 +36,11 @@ fn generate_statement(stmt: &AST) -> Vec<String> {
 
 fn generate_expr(expr: &AST) -> Vec<String> {
     match expr {
-        &AST::IntConstant(n) => vec![format!("\tmovl ${}, %eax", n)],
+        &AST::IntConstant(n) => vec![indent(&format!("movl ${}, %eax", n))],
         _ => Vec::new(),
     }
+}
+
+fn indent(line: &str) -> String {
+    "\t".to_owned() + line
 }
