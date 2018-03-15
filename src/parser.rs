@@ -144,12 +144,44 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_term(&mut self) -> Option<AST> {
+        self.parse_factor().and_then(|mut factor| {
+            loop {
+                match self.tokens.peek() {
+                    Some(&&Token::Times) | Some(&&Token::Divide) => {
+                        let next = self.tokens.next().unwrap();
+                        let op = BinaryOperator::from_token(next).unwrap();
+
+                        if let Some(next_factor) = self.parse_factor() {
+                            factor = AST::BinaryOp(op, Box::new(factor), Box::new(next_factor));
+                        } else {
+                            return None;
+                        }
+                    }
+                    _ => {
+                        break;
+                    }
+                }
+            }
+
+            Some(factor)
+        })
+    }
+
+    fn parse_factor(&mut self) -> Option<AST> {
         match self.tokens.next() {
             Some(&Token::NumLiteral(num)) => Some(AST::IntConstant(num)),
+            Some(&Token::OpenParens) => {
+                let expr = self.parse_expression();
+                if expr.is_some() && self.consume(Token::CloseParens) {
+                    expr
+                } else {
+                    None
+                }
+            }
             Some(ref token) => {
-                if let Some(operator) = UnaryOperator::from_token(token) {
-                    self.parse_expression()
-                        .map(|expr| AST::UnaryOp(operator, Box::new(expr)))
+                if let Some(op) = UnaryOperator::from_token(token) {
+                    self.parse_factor()
+                        .map(|factor| AST::UnaryOp(op, Box::new(factor)))
                 } else {
                     None
                 }
