@@ -7,6 +7,7 @@ pub enum AST {
     Function(Box<str>, Box<AST>),
     Return(Box<AST>),
     UnaryOp(UnaryOperator, Box<AST>),
+    BinaryOp(BinaryOperator, Box<AST>, Box<AST>),
     IntConstant(u64),
 }
 
@@ -23,6 +24,26 @@ impl UnaryOperator {
             Token::Minus => Some(UnaryOperator::Minus),
             Token::Tilde => Some(UnaryOperator::Tilde),
             Token::Bang => Some(UnaryOperator::Bang),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum BinaryOperator {
+    Plus,
+    Minus,
+    Times,
+    Divide,
+}
+
+impl BinaryOperator {
+    fn from_token(token: &Token) -> Option<Self> {
+        match *token {
+            Token::Plus => Some(BinaryOperator::Plus),
+            Token::Minus => Some(BinaryOperator::Minus),
+            Token::Times => Some(BinaryOperator::Times),
+            Token::Divide => Some(BinaryOperator::Divide),
             _ => None,
         }
     }
@@ -99,6 +120,30 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self) -> Option<AST> {
+        self.parse_term().and_then(|mut term| {
+            loop {
+                match self.tokens.peek() {
+                    Some(&&Token::Plus) | Some(&&Token::Minus) => {
+                        let next = self.tokens.next().unwrap();
+                        let op = BinaryOperator::from_token(next).unwrap();
+
+                        if let Some(next_term) = self.parse_term() {
+                            term = AST::BinaryOp(op, Box::new(term), Box::new(next_term));
+                        } else {
+                            return None;
+                        }
+                    }
+                    _ => {
+                        break;
+                    }
+                }
+            }
+
+            Some(term)
+        })
+    }
+
+    fn parse_term(&mut self) -> Option<AST> {
         match self.tokens.next() {
             Some(&Token::NumLiteral(num)) => Some(AST::IntConstant(num)),
             Some(ref token) => {
