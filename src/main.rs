@@ -8,6 +8,7 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::process::Command;
 
+use lexer::Lexer;
 use parser::Parser;
 
 fn main() {
@@ -20,7 +21,8 @@ fn main() {
     let filepath = Path::new(&args[0]);
     let source = read_source(filepath);
 
-    let asm = lexer::lex(&source)
+    let asm = Lexer::new(&source)
+        .lex()
         .and_then(|tokens| Parser::new(&tokens).parse())
         .map(|ast| codegen::generate(ast));
 
