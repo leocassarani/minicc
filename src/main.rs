@@ -8,6 +8,8 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::process::Command;
 
+use parser::Parser;
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     if args.is_empty() {
@@ -19,7 +21,7 @@ fn main() {
     let source = read_source(filepath);
 
     let asm = lexer::lex(&source)
-        .and_then(|tokens| parser::parse(&tokens))
+        .and_then(|tokens| Parser::new(&tokens).parse())
         .map(|ast| codegen::generate(ast));
 
     match asm {

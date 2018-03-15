@@ -1,5 +1,5 @@
 use lexer::Token;
-use std::slice;
+use std::{iter, slice};
 
 #[derive(Debug, PartialEq)]
 pub enum AST {
@@ -28,76 +28,95 @@ impl UnaryOperator {
     }
 }
 
-pub fn parse(tokens: &[Token]) -> Option<AST> {
-    parse_program(&mut tokens.iter())
+pub struct Parser<'a> {
+    tokens: iter::Peekable<slice::Iter<'a, Token>>,
 }
 
-fn parse_program(tokens: &mut slice::Iter<Token>) -> Option<AST> {
-    parse_function(tokens).map(|func| AST::Program(Box::new(func)))
-}
-
-fn parse_function(tokens: &mut slice::Iter<Token>) -> Option<AST> {
-    if !consume(tokens, Token::IntType) {
-        return None;
-    }
-
-    match tokens.next() {
-        Some(&Token::Identifier(ref name)) => {
-            let func_name = name.clone();
-
-            if !consume(tokens, Token::OpenParens) {
-                return None;
-            }
-
-            if !consume(tokens, Token::CloseParens) {
-                return None;
-            }
-
-            if !consume(tokens, Token::OpenBrace) {
-                return None;
-            }
-
-            let func = parse_statement(tokens).map(|body| AST::Function(func_name, Box::new(body)));
-
-            if consume(tokens, Token::CloseBrace) {
-                func
-            } else {
-                None
-            }
+impl<'a> Parser<'a> {
+    pub fn new(tokens: &'a [Token]) -> Parser {
+        Parser {
+            tokens: tokens.iter().peekable(),
         }
-        _ => None,
-    }
-}
-
-fn parse_statement(tokens: &mut slice::Iter<Token>) -> Option<AST> {
-    // The only type of statement that we support is a return statement.
-    if !consume(tokens, Token::Return) {
-        return None;
     }
 
-    let statement = parse_expression(tokens).map(|expr| AST::Return(Box::new(expr)));
-
-    if consume(tokens, Token::Semicolon) {
-        statement
-    } else {
-        None
+    pub fn parse(&mut self) -> Option<AST> {
+        self.parse_program()
     }
-}
 
-fn parse_expression(tokens: &mut slice::Iter<Token>) -> Option<AST> {
-    match tokens.next() {
-        Some(&Token::NumLiteral(num)) => Some(AST::IntConstant(num)),
-        Some(ref token) => {
-            if let Some(operator) = UnaryOperator::from_token(token) {
-                parse_expression(tokens).map(|expr| AST::UnaryOp(operator, Box::new(expr)))
-            } else {
-                None
-            }
+    fn parse_program(&mut self) -> Option<AST> {
+        self.parse_function()
+            .map(|func| AST::Program(Box::new(func)))
+    }
+
+    fn parse_function(&mut self) -> Option<AST> {
+        if !self.consume(Token::IntType) {
+            return None;
         }
-        _ => None,
-    }
-}
 
-fn consume(tokens: &mut slice::Iter<Token>, token: Token) -> bool {
-    tokens.next().map(|next| *next == token).unwrap_or(false)
+        match self.tokens.next() {
+            Some(&Token::Identifier(ref name)) => {
+                let func_name = name.clone();
+
+                if !self.consume(Token::OpenParens) {
+                    return None;
+                }
+
+                if !self.consume(Token::CloseParens) {
+                    return None;
+                }
+
+                if !self.consume(Token::OpenBrace) {
+                    return None;
+                }
+
+                let func = self.parse_statement()
+                    .map(|body| AST::Function(func_name, Box::new(body)));
+
+                if self.consume(Token::CloseBrace) {
+                    func
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn parse_statement(&mut self) -> Option<AST> {
+        // The only type of statement that we support is a return statement.
+        if !self.consume(Token::Return) {
+            return None;
+        }
+
+        let statement = self.parse_expression()
+            .map(|expr| AST::Return(Box::new(expr)));
+
+        if self.consume(Token::Semicolon) {
+            statement
+        } else {
+            None
+        }
+    }
+
+    fn parse_expression(&mut self) -> Option<AST> {
+        match self.tokens.next() {
+            Some(&Token::NumLiteral(num)) => Some(AST::IntConstant(num)),
+            Some(ref token) => {
+                if let Some(operator) = UnaryOperator::from_token(token) {
+                    self.parse_expression()
+                        .map(|expr| AST::UnaryOp(operator, Box::new(expr)))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn consume(&mut self, token: Token) -> bool {
+        self.tokens
+            .next()
+            .map(|next| *next == token)
+            .unwrap_or(false)
+    }
 }
