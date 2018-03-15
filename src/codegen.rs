@@ -1,4 +1,4 @@
-use parser::{UnaryOperator, AST};
+use parser::{BinaryOperator, UnaryOperator, AST};
 
 pub fn generate(ast: AST) -> Vec<String> {
     generate_program(&ast)
@@ -42,6 +42,14 @@ fn generate_expr(expr: &AST) -> Vec<String> {
             lines.append(&mut generate_unary_op(operator));
             lines
         }
+        &AST::BinaryOp(ref operator, ref expr1, ref expr2) => {
+            let mut lines = generate_expr(expr1);
+            lines.push(indent("pushq %rax"));
+            lines.append(&mut generate_expr(expr2));
+            lines.push(indent("popq %rcx"));
+            lines.append(&mut generate_binary_op(operator));
+            lines
+        }
         _ => Vec::new(),
     }
 }
@@ -54,6 +62,27 @@ fn generate_unary_op(operator: &UnaryOperator) -> Vec<String> {
             indent("cmpl $0, %eax"),
             indent("movl $0, %eax"),
             indent("sete %al"),
+        ],
+    }
+}
+
+fn generate_binary_op(operator: &BinaryOperator) -> Vec<String> {
+    match *operator {
+        BinaryOperator::Plus => vec![indent("addl %ecx, %eax")],
+        BinaryOperator::Minus => vec![
+            indent("subl %eax, %ecx"),
+            // subl will store the result in %ecx, but we need it in %eax.
+            indent("movl %ecx, %eax"),
+        ],
+        BinaryOperator::Times => vec![indent("imul %ecx, %eax")],
+        BinaryOperator::Divide => vec![
+            // Zero out %edx, as idivl dst computes [%edx:%eax] / dst.
+            indent("movl $0, %edx"),
+            // Store expr1 in %eax, expr2 in %ebx.
+            indent("movl %eax, %ebx"),
+            indent("movl %ecx, %eax"),
+            // The quotient of idivl is written to %eax.
+            indent("idivl %ebx"),
         ],
     }
 }
