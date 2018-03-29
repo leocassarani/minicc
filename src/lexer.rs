@@ -60,7 +60,7 @@ impl<'a> Lexer<'a> {
         let mut tokens = Vec::new();
 
         loop {
-            match self.chars.next() {
+            match self.next() {
                 Some(c) => {
                     let maybe_token = Token::from_char(c).or_else(|| {
                         if c.is_digit(10) {
@@ -87,7 +87,7 @@ impl<'a> Lexer<'a> {
         let mut digits = digit.to_string();
 
         loop {
-            match self.chars.peek() {
+            match self.peek() {
                 Some(next) => {
                     if next.is_digit(10) {
                         digits.push(*next);
@@ -98,7 +98,7 @@ impl<'a> Lexer<'a> {
                 None => break,
             }
 
-            self.chars.next();
+            self.next();
         }
 
         digits.parse::<u64>().map(Token::NumLiteral).ok()
@@ -108,7 +108,7 @@ impl<'a> Lexer<'a> {
         let mut word = ch.to_string();
 
         loop {
-            match self.chars.peek() {
+            match self.peek() {
                 Some(next) => {
                     if next.is_alphabetic() || next.is_digit(10) || *next == '_' {
                         word.push(*next);
@@ -119,7 +119,7 @@ impl<'a> Lexer<'a> {
                 None => break,
             }
 
-            self.chars.next();
+            self.next();
         }
 
         match word.as_ref() {
@@ -131,27 +131,21 @@ impl<'a> Lexer<'a> {
 
     fn lex_multichar_operator(&mut self, ch: char) -> Option<Token> {
         match ch {
-            '&' => self.chars
-                .next()
+            '&' => self.next()
                 .and_then(|next| char_to_token(next, '&', Token::And)),
-            '|' => self.chars
-                .next()
+            '|' => self.next()
                 .and_then(|next| char_to_token(next, '|', Token::Or)),
-            '=' => self.chars
-                .next()
+            '=' => self.next()
                 .and_then(|next| char_to_token(next, '=', Token::Equal)),
-            '!' => self.chars
-                .peek()
+            '!' => self.peek()
                 .and_then(|next| char_to_token(*next, '=', Token::NotEqual))
                 .map(|token| self.advance_token(token))
                 .or_else(|| Some(Token::Bang)),
-            '<' => self.chars
-                .peek()
+            '<' => self.peek()
                 .and_then(|next| char_to_token(*next, '=', Token::LessThanOrEqual))
                 .map(|token| self.advance_token(token))
                 .or_else(|| Some(Token::LessThan)),
-            '>' => self.chars
-                .peek()
+            '>' => self.peek()
                 .and_then(|next| char_to_token(*next, '=', Token::GreaterThanOrEqual))
                 .map(|token| self.advance_token(token))
                 .or_else(|| Some(Token::GreaterThan)),
@@ -161,8 +155,16 @@ impl<'a> Lexer<'a> {
 
     // Consume the next character and return the given token.
     fn advance_token(&mut self, token: Token) -> Token {
-        self.chars.next();
+        self.next();
         token
+    }
+
+    fn next(&mut self) -> Option<char> {
+        self.chars.next()
+    }
+
+    fn peek(&mut self) -> Option<&char> {
+        self.chars.peek()
     }
 }
 
