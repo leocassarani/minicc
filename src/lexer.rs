@@ -62,6 +62,10 @@ impl<'a> Lexer<'a> {
         loop {
             match self.next() {
                 Some(c) => {
+                    if c.is_whitespace() {
+                        continue;
+                    }
+
                     let maybe_token = Token::from_char(c).or_else(|| {
                         if c.is_digit(10) {
                             self.lex_number(c)
@@ -74,13 +78,18 @@ impl<'a> Lexer<'a> {
 
                     if let Some(token) = maybe_token {
                         tokens.push(token);
+                    } else {
+                        break;
                     }
                 }
-                None => break,
+                None => {
+                    // If there are no more characters, return all tokens.
+                    return Some(tokens);
+                }
             }
         }
 
-        Some(tokens)
+        None
     }
 
     fn lex_number(&mut self, digit: char) -> Option<Token> {
