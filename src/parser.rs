@@ -35,6 +35,14 @@ pub enum BinaryOperator {
     Minus,
     Times,
     Divide,
+    And,
+    Or,
+    Equal,
+    NotEqual,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
 }
 
 impl BinaryOperator {
@@ -44,6 +52,14 @@ impl BinaryOperator {
             Token::Minus => Some(BinaryOperator::Minus),
             Token::Times => Some(BinaryOperator::Times),
             Token::Divide => Some(BinaryOperator::Divide),
+            Token::And => Some(BinaryOperator::And),
+            Token::Or => Some(BinaryOperator::Or),
+            Token::Equal => Some(BinaryOperator::Equal),
+            Token::NotEqual => Some(BinaryOperator::NotEqual),
+            Token::LessThan => Some(BinaryOperator::LessThan),
+            Token::LessThanOrEqual => Some(BinaryOperator::LessThanOrEqual),
+            Token::GreaterThan => Some(BinaryOperator::GreaterThan),
+            Token::GreaterThanOrEqual => Some(BinaryOperator::GreaterThanOrEqual),
             _ => None,
         }
     }
@@ -120,6 +136,105 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expression(&mut self) -> Option<AST> {
+        self.parse_logical_and_exp().and_then(|mut term| {
+            loop {
+                match self.tokens.peek() {
+                    Some(&&Token::Or) => {
+                        let next = self.tokens.next().unwrap();
+                        let op = BinaryOperator::from_token(next).unwrap();
+
+                        if let Some(next_term) = self.parse_logical_and_exp() {
+                            term = AST::BinaryOp(op, Box::new(term), Box::new(next_term));
+                        } else {
+                            return None;
+                        }
+                    }
+                    _ => {
+                        break;
+                    }
+                }
+            }
+
+            Some(term)
+        })
+    }
+
+    fn parse_logical_and_exp(&mut self) -> Option<AST> {
+        self.parse_equality_exp().and_then(|mut term| {
+            loop {
+                match self.tokens.peek() {
+                    Some(&&Token::And) => {
+                        let next = self.tokens.next().unwrap();
+                        let op = BinaryOperator::from_token(next).unwrap();
+
+                        if let Some(next_term) = self.parse_equality_exp() {
+                            term = AST::BinaryOp(op, Box::new(term), Box::new(next_term));
+                        } else {
+                            return None;
+                        }
+                    }
+                    _ => {
+                        break;
+                    }
+                }
+            }
+
+            Some(term)
+        })
+    }
+
+    fn parse_equality_exp(&mut self) -> Option<AST> {
+        self.parse_relational_exp().and_then(|mut term| {
+            loop {
+                match self.tokens.peek() {
+                    Some(&&Token::Equal) | Some(&&Token::NotEqual) => {
+                        let next = self.tokens.next().unwrap();
+                        let op = BinaryOperator::from_token(next).unwrap();
+
+                        if let Some(next_term) = self.parse_relational_exp() {
+                            term = AST::BinaryOp(op, Box::new(term), Box::new(next_term));
+                        } else {
+                            return None;
+                        }
+                    }
+                    _ => {
+                        break;
+                    }
+                }
+            }
+
+            Some(term)
+        })
+    }
+
+    fn parse_relational_exp(&mut self) -> Option<AST> {
+        self.parse_additive_exp().and_then(|mut term| {
+            loop {
+                match self.tokens.peek() {
+                    Some(&&Token::LessThan)
+                    | Some(&&Token::LessThanOrEqual)
+                    | Some(&&Token::GreaterThan)
+                    | Some(&&Token::GreaterThanOrEqual) => {
+                        let next = self.tokens.next().unwrap();
+                        let op = BinaryOperator::from_token(next).unwrap();
+
+                        if let Some(next_term) = self.parse_additive_exp() {
+                            term = AST::BinaryOp(op, Box::new(term), Box::new(next_term));
+                        } else {
+                            return None;
+                        }
+                    }
+                    _ => {
+                        break;
+                    }
+                }
+            }
+
+            Some(term)
+        })
+    }
+
+    fn parse_additive_exp(&mut self) -> Option<AST> {
         self.parse_term().and_then(|mut term| {
             loop {
                 match self.tokens.peek() {

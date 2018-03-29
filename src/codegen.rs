@@ -84,6 +84,7 @@ fn generate_binary_op(operator: &BinaryOperator) -> Vec<String> {
             // The quotient of idivl is written to %eax.
             indent("idivl %ebx"),
         ],
+        _ => Vec::new(),
     }
 }
 
