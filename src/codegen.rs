@@ -84,8 +84,37 @@ fn generate_binary_op(operator: &BinaryOperator) -> Vec<String> {
             // The quotient of idivl is written to %eax.
             indent("idivl %ebx"),
         ],
-        _ => Vec::new(),
+        BinaryOperator::Or => vec![
+            indent("orl %ecx, %eax"),
+            indent("movl $0, %eax"),
+            indent("setne %al"),
+        ],
+        BinaryOperator::And => vec![
+            indent("cmpl $0, %ecx"),
+            indent("setne %cl"),
+            indent("cmpl $0, %eax"),
+            indent("movl $0, %eax"),
+            indent("setne %al"),
+            indent("andb %cl, %al"),
+        ],
+        // Handle ==, !=, <, <=, >, >=
+        _ => generate_binary_comparison(operator),
     }
+}
+
+fn generate_binary_comparison(operator: &BinaryOperator) -> Vec<String> {
+    let mut lines = vec![indent("cmpl %eax, %ecx"), indent("movl $0, %eax")];
+    let set_al = match *operator {
+        BinaryOperator::Equal => indent("sete %al"),
+        BinaryOperator::NotEqual => indent("setne %al"),
+        BinaryOperator::LessThan => indent("setl %al"),
+        BinaryOperator::LessThanOrEqual => indent("setle %al"),
+        BinaryOperator::GreaterThan => indent("setg %al"),
+        BinaryOperator::GreaterThanOrEqual => indent("setge %al"),
+        _ => String::new(),
+    };
+    lines.push(set_al);
+    lines
 }
 
 fn indent(line: &str) -> String {
