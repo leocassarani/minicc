@@ -17,6 +17,14 @@ pub enum Token {
     Plus,
     Times,
     Divide,
+    And,
+    Or,
+    Equal,
+    NotEqual,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
 }
 
 impl Token {
@@ -29,7 +37,6 @@ impl Token {
             ';' => Some(Token::Semicolon),
             '-' => Some(Token::Minus),
             '~' => Some(Token::Tilde),
-            '!' => Some(Token::Bang),
             '+' => Some(Token::Plus),
             '*' => Some(Token::Times),
             '/' => Some(Token::Divide),
@@ -61,7 +68,7 @@ impl<'a> Lexer<'a> {
                         } else if c.is_alphabetic() || c == '_' {
                             self.lex_word(c)
                         } else {
-                            None
+                            self.lex_multichar_operator(c)
                         }
                     });
 
@@ -120,5 +127,49 @@ impl<'a> Lexer<'a> {
             "return" => Some(Token::Return),
             _ => Some(Token::Identifier(word.into_boxed_str())),
         }
+    }
+
+    fn lex_multichar_operator(&mut self, ch: char) -> Option<Token> {
+        match ch {
+            '&' => self.chars
+                .next()
+                .and_then(|next| char_to_token(next, '&', Token::And)),
+            '|' => self.chars
+                .next()
+                .and_then(|next| char_to_token(next, '|', Token::Or)),
+            '=' => self.chars
+                .next()
+                .and_then(|next| char_to_token(next, '=', Token::Equal)),
+            '!' => self.chars
+                .peek()
+                .and_then(|next| char_to_token(*next, '=', Token::NotEqual))
+                .map(|token| self.advance_token(token))
+                .or_else(|| Some(Token::Bang)),
+            '<' => self.chars
+                .peek()
+                .and_then(|next| char_to_token(*next, '=', Token::LessThanOrEqual))
+                .map(|token| self.advance_token(token))
+                .or_else(|| Some(Token::LessThan)),
+            '>' => self.chars
+                .peek()
+                .and_then(|next| char_to_token(*next, '=', Token::GreaterThanOrEqual))
+                .map(|token| self.advance_token(token))
+                .or_else(|| Some(Token::GreaterThan)),
+            _ => None,
+        }
+    }
+
+    // Consume the next character and return the given token.
+    fn advance_token(&mut self, token: Token) -> Token {
+        self.chars.next();
+        token
+    }
+}
+
+fn char_to_token(ch: char, want: char, token: Token) -> Option<Token> {
+    if ch == want {
+        Some(token)
+    } else {
+        None
     }
 }
